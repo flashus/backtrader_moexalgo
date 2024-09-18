@@ -105,8 +105,11 @@ class MoexAlgoData(DataBase):
                 timestamp, open_, high, low, close, volume = kline
             else:
                 if self.metric == 'tradestats':
-                    datetime_, pr_open, pr_high, pr_low, pr_close, pr_change, trades, vol, val, pr_std, disb, pr_vwap, \
-                        trades_b, vol_b, val_b, pr_vwap_b, trades_s, vol_s, val_s, pr_vwap_s = kline
+                    # datetime_, pr_open, pr_high, pr_low, pr_close, pr_change, trades, vol, val, pr_std, disb, pr_vwap, \
+                    #     trades_b, vol_b, val_b, pr_vwap_b, trades_s, vol_s, val_s, pr_vwap_s = kline
+                    tradedate, tradetime, pr_open, pr_high, pr_low, pr_close, pr_std, vol, val, trades, pr_vwap, pr_change, trades_b, trades_s, val_b, val_s, vol_b, vol_s, disb, \
+                          pr_vwap_b, pr_vwap_s, datetime_, \
+                          sec_pr_open, sec_pr_high, sec_pr_low, sec_pr_close = kline
                     timestamp = datetime_
                     open_ = pr_open
                     high = pr_high
@@ -116,7 +119,9 @@ class MoexAlgoData(DataBase):
                     _super_candle = {'pr_change': pr_change, 'trades': trades, 'val': val,
                                      'pr_std': pr_std, 'disb': disb, 'pr_vwap': pr_vwap, 'trades_b': trades_b,
                                      'vol_b': vol_b, 'val_b': val_b, 'pr_vwap_b': pr_vwap_b,
-                                     'trades_s': trades_s, 'vol_s': vol_s, 'val_s':val_s, 'pr_vwap_s': pr_vwap_s}
+                                     'trades_s': trades_s, 'vol_s': vol_s, 'val_s':val_s, 'pr_vwap_s': pr_vwap_s,
+                                     'sec_pr_open': sec_pr_open, 'sec_pr_high': sec_pr_high, 'sec_pr_low': sec_pr_low,
+                                     'sec_pr_close': sec_pr_close}
 
                 if self.metric == 'orderstats':
                     datetime_, put_orders, put_orders_b, put_orders_s, put_vol, put_vol_b, put_vol_s, put_val, \
@@ -413,11 +418,12 @@ class MoexAlgoData(DataBase):
         ticker = Ticker(symbol)  # Пока реализуем только для тикеров ММВБ
         while True:  # Будем получать данные пока не получим все
             if metric == 'tradestats':  # Сделки
-                iterator = ticker.tradestats(date=last_date, till_date=till_date, limit=self.limit)
+                # iterator = ticker.tradestats(start=last_date, end=till_date, limit=self.limit)
+                iterator = ticker.tradestats(start=last_date, end=till_date)
             elif metric == 'orderstats':  # Заявки
-                iterator = ticker.orderstats(date=last_date, till_date=till_date, limit=self.limit)
+                iterator = ticker.orderstats(start=last_date, end=till_date)
             elif metric == 'obstats':  # Стакан
-                iterator = ticker.obstats(date=last_date, till_date=till_date, limit=self.limit)
+                iterator = ticker.obstats(start=last_date, end=till_date)
             else:
                 print(self.symbol, 'Метрика указана неверно')
                 break
@@ -431,8 +437,8 @@ class MoexAlgoData(DataBase):
 
             if len(rows_list):
                 stats = pd.DataFrame(rows_list)  # Из списка создаем pandas DataFrame
-                stats.drop('secid', axis='columns', inplace=True)  # Удаляем колонку тикера. Название тикера есть в имени файла
-                stats.rename(columns={'ts': 'datetime'}, inplace=True)  # Переименовываем колонку даты и времени
+                stats.drop('ticker', axis='columns', inplace=True)  # Удаляем колонку тикера. Название тикера есть в имени файла
+                stats.rename(columns={'systime': 'datetime'}, inplace=True)  # Переименовываем колонку даты и времени
                 stats['datetime'] -= pd.Timedelta(minutes=5)  # 5-и минутку с датой и временем окончания переводим в дату и время начала для синхронизации с OHLCV
 
                 last_stats_dt = stats.iloc[-1]['datetime']  # Последняя полученная дата и время
