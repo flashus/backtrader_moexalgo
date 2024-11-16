@@ -1,5 +1,5 @@
 from collections import deque
-from datetime import datetime, time
+from datetime import datetime, time, date
 
 import pandas as pd
 
@@ -53,7 +53,7 @@ class MoexAlgoData(DataBase):
 
         if hasattr(self.p, 'timeframe'): self.timeframe = self.p.timeframe
         if hasattr(self.p, 'compression'): self.compression = self.p.compression
-        if hasattr(self.p, 'fromdate'): self.from_date = datetime.combine(self.p.fromdate, time.min)
+        if hasattr(self.p, 'fromdate'): self.from_date = datetime.combine(self.p.fromdate, time.min).date()
 
         if 'live_bars' in kwargs: self.live_bars = kwargs['live_bars']
         if 'skip_first_date' in kwargs: self.skip_first_date = kwargs['skip_first_date']
@@ -99,15 +99,13 @@ class MoexAlgoData(DataBase):
 
         _super_candle = {}
 
-        if type(kline) == list:  # fix
+        if isinstance(kline, list):
             timestamp, open_, high, low, close, volume = None, 0.0, 0.0, 0.0, 0.0, 0.0
             if not self.super_candles:  # если нужны обычные свечи
                 timestamp, open_, high, low, close, volume = kline
             else:
                 if self.metric == 'tradestats':
-                    # datetime_, pr_open, pr_high, pr_low, pr_close, pr_change, trades, vol, val, pr_std, disb, pr_vwap, \
-                    #     trades_b, vol_b, val_b, pr_vwap_b, trades_s, vol_s, val_s, pr_vwap_s = kline
-                    tradedate, tradetime, pr_open, pr_high, pr_low, pr_close, pr_std, vol, val, trades, pr_vwap, pr_change, trades_b, trades_s, val_b, val_s, vol_b, vol_s, disb, \
+                    _, _, pr_open, pr_high, pr_low, pr_close, pr_std, vol, val, trades, pr_vwap, pr_change, trades_b, trades_s, val_b, val_s, vol_b, vol_s, disb, \
                           pr_vwap_b, pr_vwap_s, datetime_, \
                           sec_pr_open, sec_pr_high, sec_pr_low, sec_pr_close = kline
                     timestamp = datetime_
@@ -272,18 +270,18 @@ class MoexAlgoData(DataBase):
         else:
             self._start_live()
 
-    def get_candles(self, from_date, symbol, interval, skip_first_date=False, skip_last_date=False, four_price_doji=True, is_test=False):
+    def get_candles(self, from_date: date, symbol, interval, skip_first_date=False, skip_last_date=False, four_price_doji=True, is_test=False):
         """Получение баров, используем библиотеку moexalgo
             :param date from_date: С какой даты получаем данные
             :param str symbol: Код тикера
-            :param str interval: Временной интервал '1m', '10m', '1h', '1D', '1W', '1M' + '5m' resampling from '1m' + '30m' resampling from '10m'
+            :param str interval: Временной интервал '1m', '10min', '1h', '1D', '1W', '1M' + '5min' resampling from '1m' + '30min' resampling from '10min'
             :param bool skip_first_date: Убрать бары на первую полученную дату
             :param bool skip_last_date: Убрать бары на последнюю полученную дату
             :param bool four_price_doji: Оставить бары с дожи 4-х цен
             :param bool is_test: Для проведения live теста в offline
         """
 
-        last_date = datetime(2020, 1, 1)  # Получать данные будем с первой возможной даты и времени Алгопака
+        last_date = datetime(2020, 1, 1).date()  # Получать данные будем с первой возможной даты и времени Алгопака
         if from_date and from_date >= last_date:
             last_date = from_date  # Получать данные будем с указанной даты
         last_dt = last_date
@@ -291,23 +289,22 @@ class MoexAlgoData(DataBase):
         # проверяем, нужно ли делать resample
         resample = False
         interval_to = None
-        if interval == '5m':
+        if interval == '5min':
             resample = True
             interval = '1m'
-            interval_to = '5T'  # is equal for '5m (pandas)
+            interval_to = '5T'  # is equal for '5min (pandas)
 
-        if interval == '30m':
+        if interval == '30min':
             resample = True
-            interval = '10m'
-            interval_to = '30T'  # is equal for '30m (pandas)
+            interval = '10min'
+            interval_to = '30T'  # is equal for '30min (pandas)
 
         df = pd.DataFrame()
         get_live_bars_from = None
         till_date = datetime.now().date()  # Получать данные будем до текущей даты
         ticker = Ticker(symbol)  # Пока реализуем только для тикеров ММВБ
         while True:  # Будем получать данные пока не получим все
-            iterator = ticker.candles(date=last_date, till_date=till_date, period=interval,
-                                      limit=self.limit)  # История. Максимум, 50000 баров
+            iterator = ticker.candles(start=last_date, end=till_date, period=interval) # История. Максимум, 50000 баров
             rows_list = []  # Будем собирать строки в список
             try:
                 for it in iterator:  # Итерируем генератор
@@ -382,11 +379,11 @@ class MoexAlgoData(DataBase):
 
         return df, get_live_bars_from
 
-    def get_super_candles(self, from_date, symbol, interval="5m", metric='tradestats', is_test=False):
+    def get_super_candles(self, from_date, symbol, interval="5min", metric='tradestats', is_test=False):
         """Получение метрики тикера, используем библиотеку moexalgo
             :param date from_date: С какой даты получаем данные
             :param str symbol: Код тикера
-            :param str interval: Временной интервал '5m' - биржа отдает только такой интервал для Super Candles
+            :param str interval: Временной интервал '5min' - биржа отдает только такой интервал для Super Candles
             :param str metric: Метрика. 'tradestats' - сделки, 'orderstats' - заявки, 'obstats' - стакан
             :param bool is_test: Для проведения live теста в offline
         """
@@ -402,15 +399,15 @@ class MoexAlgoData(DataBase):
         # проверяем, нужно ли делать resample
         resample = False
         interval_to = None
-        if interval == '10m':
+        if interval == '10min':
             resample = True
-            interval = '5m'
-            interval_to = '10T'  # is equal for '10m (pandas)
+            interval = '5min'
+            interval_to = '10T'  # is equal for '10min (pandas)
 
-        if interval == '30m':
+        if interval == '30min':
             resample = True
-            interval = '5m'
-            interval_to = '30T'  # is equal for '30m (pandas)
+            interval = '5min'
+            interval_to = '30T'  # is equal for '30min (pandas)
 
         df = pd.DataFrame()
         get_live_bars_from = None
