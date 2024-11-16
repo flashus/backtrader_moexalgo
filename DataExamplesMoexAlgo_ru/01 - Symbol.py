@@ -16,7 +16,7 @@ if __name__ == '__main__':  # Точка входа при запуске это
 
     cerebro = Cerebro(stdstats=False)  # Инициируем "движок" BackTrader. Стандартная статистика сделок и кривой доходности не нужна
 
-    today = date.today()  # Сегодняшняя дата без времени
+    today = datetime.now()  # Сегодняшняя дата без времени
     week_ago = today - timedelta(days=7)  # неделю назад
     days_ago_5 = today - timedelta(days=5)  # три дня назад
     days_ago_10 = today - timedelta(days=10)  # десять дней назад

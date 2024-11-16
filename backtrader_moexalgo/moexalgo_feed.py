@@ -53,7 +53,7 @@ class MoexAlgoData(DataBase):
 
         if hasattr(self.p, 'timeframe'): self.timeframe = self.p.timeframe
         if hasattr(self.p, 'compression'): self.compression = self.p.compression
-        if hasattr(self.p, 'fromdate'): self.from_date = datetime.combine(self.p.fromdate, time.min).date()
+        if hasattr(self.p, 'fromdate'): self.from_date = datetime.combine(self.p.fromdate, time.min)
 
         if 'live_bars' in kwargs: self.live_bars = kwargs['live_bars']
         if 'skip_first_date' in kwargs: self.skip_first_date = kwargs['skip_first_date']
